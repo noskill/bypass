@@ -126,7 +126,6 @@ else
     echo "ASN list file $ASN_LIST_FILE not found. Skipping ASN processing." >> "$LOG_FILE"
 fi
 
-
 # Read domains from file and resolve them
 while read -r DOMAIN; do
     # Skip empty lines and comments
@@ -136,7 +135,7 @@ while read -r DOMAIN; do
     echo "Resolving domain: $DOMAIN" >> "$LOG_FILE"
 
     # Resolve domain to IPv4 addresses
-    IP_ADDRESSES=$($TIMEOUT_CMD $DNS_QUERY_TIMEOUT $DIG_CMD +short @8.8.8.8 A $DOMAIN | $GREP_CMD -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$')
+    IP_ADDRESSES=$($TIMEOUT_CMD $DNS_QUERY_TIMEOUT $DIG_CMD +short @8.8.4.4 A $DOMAIN | $GREP_CMD -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$')
 
     # Handle DNS query timeout or failure
     if [ $? -ne 0 ] || [ -z "$IP_ADDRESSES" ]; then
@@ -151,6 +150,21 @@ while read -r DOMAIN; do
     done
 
 done < "$DOMAIN_LIST_FILE"
+
+# Copy entries from existing ipset to temporary ipset, preserving remaining timeouts
+echo "Copying entries from $IPSET_NAME to $TEMP_IPSET_NAME with remaining timeouts" >> "$LOG_FILE"
+$IPSET_CMD save $IPSET_NAME | while read -r line; do
+    case "$line" in
+        add*)
+            # Replace 'add IPSET_NAME' with 'add TEMP_IPSET_NAME'
+            new_line=$(echo "$line" | $SED_CMD "s/add $IPSET_NAME/add $TEMP_IPSET_NAME/")
+#            echo "Executing: $IPSET_CMD $new_line"  >> "$LOG_FILE"
+            $IPSET_CMD $new_line
+            ;;
+        *)
+            ;;
+    esac
+done
 
 # Atomically swap the temporary ipset with the original ipset
 echo "Swapping ipset $IPSET_NAME with temporary ipset $TEMP_IPSET_NAME" >> "$LOG_FILE"
