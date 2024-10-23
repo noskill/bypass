@@ -22,7 +22,11 @@ Basically we are creating rules to redirect matching tcp and udp traffic via rem
 
 ## router setup
 
-
+login to router with ssh and install packages
+```
+# opkg install iptables vim"
+```
+see [https://github.com/noskill/bypass/master/packages.txt](https://github.com/noskill/bypass/blob/master/packages.txt) for complete list of packages
 
 ## vps setup
 
