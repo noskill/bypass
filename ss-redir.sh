@@ -5,7 +5,7 @@ VPS_IP_ADDRESS=xxx.xxx.xxx.xxx
 
 IPTABLES=/opt/sbin/iptables
 IP_CMD=/opt/sbin/ip
-LOG=/tmp/ss-redir.log
+LOG=/dev/null
 GREP_CMD=/opt/bin/grep
 
 
