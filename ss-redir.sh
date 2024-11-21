@@ -5,6 +5,7 @@ VPS_IP_ADDRESS=xxx.xxx.xxx.xxx
 
 IPTABLES=/opt/sbin/iptables
 IP_CMD=/opt/sbin/ip
+LOG=/tmp/ss-redir.log
 GREP_CMD=/opt/bin/grep
 
 
@@ -16,6 +17,7 @@ chain_exists() {
 # Create or flush SHADOWSOCKS chain in the nat table
 if chain_exists nat SHADOWSOCKS; then
     # Chain exists, flush it
+    echo "chain nat SHADOWSOCKS exists" >> $LOG
     $IPTABLES -t nat -F SHADOWSOCKS
 else
     # Chain doesn't exist, create it
@@ -26,6 +28,7 @@ fi
 if chain_exists mangle SHADOWSOCKS; then
     # Chain exists, flush it
     $IPTABLES -t mangle -F SHADOWSOCKS
+    echo "chain mangle SHADOWSOCKS exists" >> $LOG
 else
     # Chain doesn't exist, create it
     $IPTABLES -t mangle -N SHADOWSOCKS
