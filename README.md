@@ -14,6 +14,8 @@ kenel modules for netfilter:
 
 ![image](https://github.com/user-attachments/assets/e337ae67-50ef-4183-8539-1367d6edbfe5)
 
+Also **uninstall** Network Accelerator Engine!
+![image](https://github.com/user-attachments/assets/f6382c3b-8bdc-4982-9da5-4a4203c04763)
 
 ## Overview
 
