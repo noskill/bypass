@@ -9,6 +9,7 @@ TEMP_IPSET_NAME="${IPSET_NAME}_temp"
 # Path to the domain list file
 DOMAIN_LIST_FILE="/opt/etc/redirect.txt"
 ASN_LIST_FILE="/opt/etc/asnredirect.txt"
+RANGES_FILE="/opt/etc/ranges_redirect.txt"
 
 # Time to live for IP addresses in seconds (e.g., 1 day)
 IPSET_TIMEOUT=86400
@@ -40,7 +41,7 @@ fi
 # Log file
 LOG_FILE="/tmp/ipset_update.log"
 # Uncomment the next line to disable logging
-# LOG_FILE="/dev/null"
+LOG_FILE="/dev/null"
 
 # Lock file to prevent concurrent runs
 LOCK_FILE="/tmp/update_ipset.lock"
@@ -66,6 +67,7 @@ trap cleanup EXIT
 
 # Create the temporary ipset with the desired type and parameters
 echo "Creating temporary ipset: $TEMP_IPSET_NAME" >> "$LOG_FILE"
+$IPSET_CMD create $IPSET_NAME hash:net family inet timeout $IPSET_TIMEOUT hashsize 16384 maxelem 1000000
 $IPSET_CMD create $TEMP_IPSET_NAME hash:net family inet timeout $IPSET_TIMEOUT hashsize 16384 maxelem 1000000
 
 # Download and process goog.json
@@ -87,6 +89,9 @@ else
         echo "Adding prefix: $PREFIX to temporary ipset: $TEMP_IPSET_NAME" >> "$LOG_FILE"
         $IPSET_CMD add $TEMP_IPSET_NAME $PREFIX
     done
+    # remove these subnetworks to keep google dns working
+    $IPSET_CMD del $TEMP_IPSET_NAME 8.8.4.0/24
+    $IPSET_CMD del $TEMP_IPSET_NAME 8.8.8.0/24
 fi
 
 # Check if ASN list file exists
@@ -150,6 +155,26 @@ while read -r DOMAIN; do
     done
 
 done < "$DOMAIN_LIST_FILE"
+
+
+# Read IP ranges from file and add them to temporary ipset
+while read -r RANGE; do
+    # Skip empty lines and comments
+    [ -z "$RANGE" ] && continue
+    echo "$RANGE" | $GREP_CMD -qE '^\s*#' && continue
+
+    # Trim leading and trailing whitespace
+    RANGE=$(echo "$RANGE" | $SED_CMD 's/^\s*//;s/\s*$//')
+
+    # Validate IP or IP range format
+    if echo "$RANGE" | $GREP_CMD -qE '^([0-9]{1,3}\.){3}[0-9]{1,3}(/[0-9]{1,2})?$'; then
+        echo "Adding range/IP: $RANGE to temporary ipset: $TEMP_IPSET_NAME" >> "$LOG_FILE"
+        $IPSET_CMD add $TEMP_IPSET_NAME $RANGE
+    else
+        echo "Warning: Invalid IP or range format: $RANGE" >> "$LOG_FILE"
+    fi
+done < "$RANGES_FILE"
+
 
 # Copy entries from existing ipset to temporary ipset, preserving remaining timeouts
 echo "Copying entries from $IPSET_NAME to $TEMP_IPSET_NAME with remaining timeouts" >> "$LOG_FILE"
