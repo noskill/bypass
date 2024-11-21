@@ -1,1 +1,11 @@
+{
+    "server": "xx.xx.xx.xx",
+    "mode":"tcp_and_udp",
+    "server_port": 1380,
+    "password":"password",
+    "timeout":60,
+    "method":"chacha20-ietf-poly1305",
+    "log_file": "/var/log/shadowsocks.log",
+    "reuse_port": true
+}
 
