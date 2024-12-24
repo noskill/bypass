@@ -27,12 +27,23 @@ TOUCH_CMD="/opt/bin/touch"
 SED_CMD="/opt/bin/sed"
 WHOIS_CMD="/opt/bin/whois"
 TR_CMD="/opt/bin/tr"
+JQ_CMD="/opt/bin/jq"
 
 # Determine which download command to use
 if [ -x "/opt/bin/curl" ]; then
     DOWNLOAD_CMD="/opt/bin/curl -s -o"
 elif [ -x "/opt/bin/wget" ]; then
     DOWNLOAD_CMD="/opt/bin/wget -q -O"
+else
+    echo "Error: Neither curl nor wget is available."
+    exit 1
+fi
+
+# Determine which download command to use (curl or wget)
+if [ -x "/opt/bin/curl" ]; then
+    CURL_CMD="/opt/bin/curl -sL"
+elif [ -x "/opt/bin/wget" ]; then
+    CURL_CMD="/opt/bin/wget -qO -"
 else
     echo "Error: Neither curl nor wget is available."
     exit 1
@@ -106,22 +117,23 @@ if [ -f "$ASN_LIST_FILE" ]; then
         ASN=$(echo "$ASN" | $TR_CMD -d '[:space:]')
 
         echo "Fetching IP prefixes for ASN $ASN..." >> "$LOG_FILE"
-        # Fetch IP prefixes associated with the ASN
-        PREFIXES=$($WHOIS_CMD -h whois.radb.net -- "-i origin AS$ASN" | $GREP_CMD -Eo 'route(:6)?:\s*[0-9a-fA-F:.]*/[0-9]+' | $GREP_CMD -Eo '[0-9a-fA-F:.]+/[0-9]+')
+        # Fetch IP prefixes associated with the ASN via ip.guide
+        JSON_DATA=$($CURL_CMD "https://ip.guide/as$ASN")
+
+        if [ -z "$JSON_DATA" ]; then
+            echo "Warning: No data returned for ASN $ASN" >> "$LOG_FILE"
+            continue
+        fi
+
+        # Extract IPv4 prefixes from JSON data using jq
+        PREFIXES=$(echo "$JSON_DATA" | $JQ_CMD -r '.routes.v4[]')
 
         if [ -z "$PREFIXES" ]; then
             echo "Warning: No prefixes found for ASN $ASN" >> "$LOG_FILE"
             continue
         fi
-
         # Add the prefixes to the temporary ipset
         for PREFIX in $PREFIXES; do
-            # Skip IPv6 addresses (since ipset is family inet)
-            echo "$PREFIX" | $GREP_CMD -q ':'
-            if [ $? -eq 0 ]; then
-                echo "Skipping IPv6 prefix: $PREFIX" >> "$LOG_FILE"
-                continue
-            fi
             echo "Adding prefix: $PREFIX to temporary ipset: $TEMP_IPSET_NAME" >> "$LOG_FILE"
             $IPSET_CMD add "$TEMP_IPSET_NAME" "$PREFIX"
         done
