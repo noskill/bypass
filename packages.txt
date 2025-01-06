@@ -56,3 +56,4 @@ zlib
 zoneinfo-asia
 zoneinfo-core
 zoneinfo-europe
+jq
