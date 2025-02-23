@@ -14,6 +14,8 @@ RANGES_FILE="/opt/etc/ranges_redirect.txt"
 # Time to live for IP addresses in seconds (e.g., 1 day)
 IPSET_TIMEOUT=86400
 
+DNS_SERVER=208.67.222.222
+
 # DNS query timeout in seconds
 DNS_QUERY_TIMEOUT=5
 
@@ -152,7 +154,7 @@ while read -r DOMAIN; do
     echo "Resolving domain: $DOMAIN" >> "$LOG_FILE"
 
     # Resolve domain to IPv4 addresses
-    IP_ADDRESSES=$($TIMEOUT_CMD $DNS_QUERY_TIMEOUT $DIG_CMD +short @8.8.4.4 A $DOMAIN | $GREP_CMD -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$')
+    IP_ADDRESSES=$($TIMEOUT_CMD $DNS_QUERY_TIMEOUT $DIG_CMD +short @$DNS_SERVER A $DOMAIN | $GREP_CMD -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$')
 
     # Handle DNS query timeout or failure
     if [ $? -ne 0 ] || [ -z "$IP_ADDRESSES" ]; then
