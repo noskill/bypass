@@ -30,6 +30,7 @@ SED_CMD="/opt/bin/sed"
 WHOIS_CMD="/opt/bin/whois"
 TR_CMD="/opt/bin/tr"
 JQ_CMD="/opt/bin/jq"
+DATE="/opt/bin/date"
 
 # Determine which download command to use
 if [ -x "/opt/bin/curl" ]; then
@@ -52,13 +53,14 @@ else
 fi
 
 # Log file
+LOG_FILE="/dev/null"
 LOG_FILE="/tmp/ipset_update.log"
 # Uncomment the next line to disable logging
-LOG_FILE="/dev/null"
 
 # Lock file to prevent concurrent runs
 LOCK_FILE="/tmp/update_ipset.lock"
 
+echo `$DATE` > $LOG_FILE
 # Exit if another instance is running
 if [ -e "$LOCK_FILE" ]; then
     echo "Script is already running. Exiting." >> "$LOG_FILE"
@@ -120,7 +122,7 @@ if [ -f "$ASN_LIST_FILE" ]; then
 
         echo "Fetching IP prefixes for ASN $ASN..." >> "$LOG_FILE"
         # Fetch IP prefixes associated with the ASN via ip.guide
-        JSON_DATA=$($CURL_CMD "https://ip.guide/as$ASN")
+	JSON_DATA=$($CURL_CMD "https://stat.ripe.net/data/announced-prefixes/data.json?resource=AS${ASN}") 
 
         if [ -z "$JSON_DATA" ]; then
             echo "Warning: No data returned for ASN $ASN" >> "$LOG_FILE"
@@ -128,7 +130,7 @@ if [ -f "$ASN_LIST_FILE" ]; then
         fi
 
         # Extract IPv4 prefixes from JSON data using jq
-        PREFIXES=$(echo "$JSON_DATA" | $JQ_CMD -r '.routes.v4[]')
+        PREFIXES=$(echo "$JSON_DATA" | $JQ_CMD -r '.data.prefixes[].prefix'| $GREP_CMD -v ":")
 
         if [ -z "$PREFIXES" ]; then
             echo "Warning: No prefixes found for ASN $ASN" >> "$LOG_FILE"
